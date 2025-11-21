@@ -2,18 +2,15 @@ import requests
 import os
 from datetime import datetime
 
-# Récupération des variables d'environnement (clés sécurisées)
+# Récupération des variables d'environnement
 TAPIT_API_KEY = os.environ.get('TAPIT_API_KEY')
-TAPIT_LINK_ID = os.environ.get('TAPIT_LINK_ID')  # L'ID de ton lien Tap.it
+PROJECT_ID = os.environ.get('PROJECT_ID')  # L'ID de ton projet EMPIRE - Affiliation
 DISCORD_WEBHOOK_URL = os.environ.get('DISCORD_WEBHOOK_URL')
 
-def get_tapit_stats():
-    """Récupère les statistiques depuis l'API Tap.it"""
+def get_project_links():
+    """Récupère tous les liens du projet spécifique"""
     
-    # URL de l'API Tap.it (à ajuster selon leur documentation)
-    # Note: Ceci est un exemple, l'URL exacte dépend de la doc Tap.it
-    url = f"https://api.tap.it/v1/links/{TAPIT_LINK_ID}/stats"
-    
+    url = "https://api.taap.it/v1/links"
     headers = {
         "Authorization": f"Bearer {TAPIT_API_KEY}",
         "Content-Type": "application/json"
@@ -22,24 +19,56 @@ def get_tapit_stats():
     try:
         response = requests.get(url, headers=headers)
         response.raise_for_status()
-        data = response.json()
+        all_links = response.json()
         
-        # Extraction du nombre de clics (à ajuster selon la structure de réponse)
-        clicks = data.get('clicks', 0)
-        return clicks
+        # Filtrer uniquement les liens du projet EMPIRE - Affiliation
+        project_links = [link for link in all_links if link.get('project_id') == PROJECT_ID]
+        
+        return project_links
     
     except requests.exceptions.RequestException as e:
-        print(f"Erreur lors de la récupération des stats: {e}")
+        print(f"❌ Erreur lors de la récupération des liens: {e}")
         return None
 
-def send_to_discord(clicks):
+def get_link_stats(link_id):
+    """Récupère les statistiques d'un lien spécifique"""
+    
+    url = f"https://api.taap.it/v1/stats/links/{link_id}"
+    headers = {
+        "Authorization": f"Bearer {TAPIT_API_KEY}"
+    }
+    
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+        
+        # La réponse est une liste, on prend le premier élément
+        if isinstance(data, list) and len(data) > 0:
+            return data[0].get('total_clicks', 0)
+        return 0
+    
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Erreur stats pour {link_id}: {e}")
+        return 0
+
+def send_to_discord(links_stats):
     """Envoie les statistiques sur Discord via webhook"""
     
-    if clicks is None:
-        message = "❌ Erreur lors de la récupération des statistiques Tap.it"
+    if not links_stats:
+        message = "❌ Erreur lors de la récupération des statistiques"
     else:
         today = datetime.now().strftime("%d/%m/%Y")
-        message = f"📊 **Statistiques Tap.it - {today}**\n\n👆 **Clics totaux:** {clicks:,}"
+        
+        # Construction du message avec tous les liens
+        message = f"📊 **Statistiques EMPIRE - Affiliation - {today}**\n\n"
+        
+        total_clicks = 0
+        for link_name, clicks in sorted(links_stats.items()):
+            message += f"👆 **{link_name}:** {clicks:,} clics\n"
+            total_clicks += clicks
+        
+        message += f"\n📈 **TOTAL:** {total_clicks:,} clics"
     
     payload = {
         "content": message,
@@ -58,14 +87,34 @@ def main():
     print("🚀 Démarrage du bot Tap.it Stats...")
     
     # Vérification des variables d'environnement
-    if not all([TAPIT_API_KEY, TAPIT_LINK_ID, DISCORD_WEBHOOK_URL]):
+    if not all([TAPIT_API_KEY, PROJECT_ID, DISCORD_WEBHOOK_URL]):
         print("❌ Variables d'environnement manquantes!")
         return
     
-    # Récupération et envoi des stats
-    clicks = get_tapit_stats()
-    send_to_discord(clicks)
+    # Récupération des liens du projet
+    print(f"📥 Récupération des liens du projet {PROJECT_ID}...")
+    links = get_project_links()
+    
+    if not links:
+        print("❌ Aucun lien trouvé ou erreur")
+        send_to_discord(None)
+        return
+    
+    print(f"✅ {len(links)} liens trouvés")
+    
+    # Récupération des stats de chaque lien
+    links_stats = {}
+    for link in links:
+        link_id = link.get('id')
+        link_name = link.get('name', 'Sans nom')  # Récupère le nom que tu as défini
+        
+        print(f"📊 Stats pour: {link_name}...")
+        clicks = get_link_stats(link_id)
+        links_stats[link_name] = clicks
+    
+    # Envoi sur Discord
+    send_to_discord(links_stats)
+    print("✅ Terminé!")
 
 if __name__ == "__main__":
     main()
-```
