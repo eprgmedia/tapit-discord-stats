@@ -28,7 +28,7 @@ def get_project_links():
         # Gérer différents formats de réponse
         if isinstance(data, dict):
             # Si c'est un dictionnaire, chercher la clé 'data' ou 'links'
-            all_links = data.get('data', data.get('links', []))
+            all_links = data.get('items', data.get('data', data.get('links', [])))
         elif isinstance(data, list):
             # Si c'est déjà une liste
             all_links = data
