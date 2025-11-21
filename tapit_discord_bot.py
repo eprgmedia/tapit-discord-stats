@@ -1,6 +1,6 @@
 import requests
 import os
-from datetime import import datetime
+from datetime import datetime
 
 # Récupération des variables d'environnement
 TAPIT_API_KEY = os.environ.get('TAPIT_API_KEY')
