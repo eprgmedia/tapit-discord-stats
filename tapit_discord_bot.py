@@ -1,6 +1,6 @@
 import requests
 import os
-from datetime import datetime
+from datetime import import datetime
 
 # Récupération des variables d'environnement
 TAPIT_API_KEY = os.environ.get('TAPIT_API_KEY')
@@ -56,10 +56,10 @@ def send_to_discord(links_stats):
         
         total_clicks = 0
         for link_name, clicks in sorted(links_stats.items()):
-            message += f"👆 **{link_name}:** {clicks:,} clics\n"
+            message += f"👉 **{link_name}:** {clicks:,} clics\n"
             total_clicks += clicks
         
-        message += f"\n📈 **TOTAL:** {total_clicks:,} clics"
+        message += f"\n❌ **TOTAL:** {total_clicks:,} clics"
     
     payload = {
         "content": message,
@@ -74,6 +74,7 @@ def send_to_discord(links_stats):
     except requests.exceptions.RequestException as e:
         print(f"❌ Erreur lors de l'envoi sur Discord: {e}")
 
+
 def main():
     print("🚀 Démarrage du bot Tap.it Stats...")
     
@@ -83,7 +84,7 @@ def main():
         return
     
     # Récupération des liens du projet
-    print(f"📥 Récupération des liens du projet {PROJECT_ID}...")
+    print(f"🔗 Récupération des liens du projet {PROJECT_ID}...")
     links = get_project_links()
     
     if not links:
@@ -96,9 +97,9 @@ def main():
     # Récupération des stats de chaque lien
     links_stats = {}
     for link in links:
-        link_name = link.get('name', 'Sans nom')  # Récupère le nom que tu as défini
-clicks = link.get('clicks', 0)  # Récupère directement les clics du lien
-links_stats[link_name] = clicks
+        link_name = link.get('name', 'Sans nom')
+        clicks = link.get('clicks', 0)  # Récupère directement les clics du lien
+        links_stats[link_name] = clicks
     
     # Envoi sur Discord
     send_to_discord(links_stats)
