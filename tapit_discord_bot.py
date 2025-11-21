@@ -1,6 +1,6 @@
 import requests
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Récupération des variables d'environnement
 TAPIT_API_KEY = os.environ.get('TAPIT_API_KEY')
@@ -41,6 +41,56 @@ def get_project_links():
     except requests.exceptions.RequestException as e:
         print(f"❌ Erreur lors de la récupération des liens: {e}")
         return None
+
+def get_link_stats(link_id):
+    """Récupère les statistiques d'un lien - SANS paramètres de date pour avoir les stats totales"""
+    
+    url = f"https://api.taap.it/v1/stats/links/{link_id}"
+    headers = {
+        "Authorization": f"Bearer {TAPIT_API_KEY}"
+    }
+    
+    try:
+        # Premier essai : SANS paramètres (pour avoir toutes les stats)
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+        
+        print(f"  📊 Réponse API: {data}")
+        
+        # La réponse est une liste d'objets stats
+        if isinstance(data, list) and len(data) > 0:
+            # Additionner tous les total_clicks de tous les objets
+            total_clicks = sum(item.get('total_clicks', 0) for item in data)
+            return total_clicks
+        
+        # Si la liste est vide, essayer avec une période (30 derniers jours)
+        print(f"  ⚠️ Liste vide, essai avec période de 30 jours...")
+        
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=30)
+        
+        params = {
+            "start_date": start_date.strftime("%Y-%m-%dT00:00:00Z"),
+            "end_date": end_date.strftime("%Y-%m-%dT23:59:59Z"),
+            "max_days": 30
+        }
+        
+        response = requests.get(url, headers=headers, params=params)
+        response.raise_for_status()
+        data = response.json()
+        
+        print(f"  📊 Réponse API (avec dates): {data}")
+        
+        if isinstance(data, list) and len(data) > 0:
+            total_clicks = sum(item.get('total_clicks', 0) for item in data)
+            return total_clicks
+        
+        return 0
+    
+    except requests.exceptions.RequestException as e:
+        print(f"  ❌ Erreur stats: {e}")
+        return 0
 
 def send_to_discord(links_stats):
     """Envoie les statistiques sur Discord via webhook"""
@@ -92,27 +142,20 @@ def main():
     
     print(f"✅ {len(links)} liens trouvés")
     
-    # DEBUG: Afficher les champs disponibles du premier lien
-    if links and len(links) > 0:
-        print(f"🔍 Champs disponibles dans un lien: {list(links[0].keys())}")
-    
-    # Récupération des stats directement depuis les objets link
+    # Récupération des stats de chaque lien
     links_stats = {}
     if links:
         for link in links:
             link_name = link.get('name', 'Sans nom')
+            link_id = link.get('id')
             
-            # Essayer différents noms de champs possibles pour les clics
-            clicks = (
-                link.get('clicks') or 
-                link.get('click_count') or 
-                link.get('total_clicks') or 
-                link.get('clics') or
-                0
-            )
-            
-            print(f"📊 {link_name}: {clicks} clics")
-            links_stats[link_name] = clicks
+            if link_id:
+                print(f"🔍 Stats pour: {link_name} (ID: {link_id})")
+                clicks = get_link_stats(link_id)
+                print(f"   ✅ {clicks} clics")
+                links_stats[link_name] = clicks
+            else:
+                print(f"⚠️ Pas d'ID pour: {link_name}")
     
     # Envoi sur Discord
     send_to_discord(links_stats)
