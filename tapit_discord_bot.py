@@ -57,7 +57,10 @@ def get_link_stats(link_id):
         
         # La réponse est une liste, on prend le premier élément
         if isinstance(data, list) and len(data) > 0:
-            return data[0].get('total_clicks', 0)
+            stats = data[0]
+            # Essayer 'total_clicks' en premier, sinon 'clicks'
+            clicks = stats.get('total_clicks', stats.get('clicks', 0))
+            return clicks
         return 0
     
     except requests.exceptions.RequestException as e:
