@@ -36,10 +36,16 @@ def get_project_links():
             print(f"❌ Format de réponse inattendu: {type(data)}")
             return None
         
+        # Debug : afficher tous les project_id
+        print(f"🔍 Nombre total de liens: {len(all_links)}")
+        for i, link in enumerate(all_links[:5]):  # Affiche les 5 premiers liens
+            print(f"  Lien {i+1}: {link.get('name', 'Sans nom')}")
+            print(f"    project_id: {link.get('project_id')}")
+            print(f"    domain_id: {link.get('domain_id')}")
+        
         # Filtrer uniquement les liens du projet EMPIRE - Affiliation
         project_links = [link for link in all_links if link.get('project_id') == PROJECT_ID]
-        
-        return project_links
+        print(f"🎯 Liens trouvés pour project {PROJECT_ID}: {len(project_links)}")
     
     except requests.exceptions.RequestException as e:
         print(f"❌ Erreur lors de la récupération des liens: {e}")
