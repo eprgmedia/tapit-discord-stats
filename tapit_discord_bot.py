@@ -8,10 +8,9 @@ PROJECT_ID = os.environ.get('PROJECT_ID')  # L'ID de ton projet EMPIRE - Affilia
 DISCORD_WEBHOOK_URL = os.environ.get('DISCORD_WEBHOOK_URL')
 
 def get_project_links():
-    """Récupère tous les liens du projet spécifique"""
+    """Récupère tous les liens dont le nom commence par EMPIRE"""
     
-    # On récupère les liens directement depuis le projet
-    url = f"https://api.taap.it/v1/projects/{PROJECT_ID}/links"
+    url = "https://api.taap.it/v1/links"
     headers = {
         "Authorization": f"Bearer {TAPIT_API_KEY}",
         "Content-Type": "application/json"
@@ -33,8 +32,11 @@ def get_project_links():
             print(f"❌ Format de réponse inattendu: {type(data)}")
             return None
         
-        print(f"✅ {len(all_links)} liens trouvés dans le projet")
-        return all_links
+        # Filtrer uniquement les liens dont le nom commence par "EMPIRE"
+        project_links = [link for link in all_links if link.get('name', '').startswith('EMPIRE')]
+        
+        print(f"✅ {len(project_links)} liens trouvés commençant par 'EMPIRE'")
+        return project_links
     
     except requests.exceptions.RequestException as e:
         print(f"❌ Erreur lors de la récupération des liens: {e}")
