@@ -1,0 +1,32 @@
+name: Tap.it Stats to Discord
+
+on:
+  schedule:
+    # Exécution tous les jours à 9h00 (heure de Paris UTC+1)
+    - cron: '0 8 * * *'
+  workflow_dispatch:  # Permet de lancer manuellement le workflow
+
+jobs:
+  send-stats:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run Tap.it stats script
+      env:
+        TAPIT_API_KEY: ${{ secrets.TAPIT_API_KEY }}
+        TAPIT_LINK_ID: ${{ secrets.TAPIT_LINK_ID }}
+        DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      run: python tapit_discord_bot.py
