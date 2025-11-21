@@ -27,6 +27,6 @@ jobs:
     - name: Run Tap.it stats script
       env:
         TAPIT_API_KEY: ${{ secrets.TAPIT_API_KEY }}
-        TAPIT_LINK_ID: ${{ secrets.TAPIT_LINK_ID }}
+        PROJECT_ID: ${{ secrets.PROJECT_ID }}
         DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
       run: python tapit_discord_bot.py
