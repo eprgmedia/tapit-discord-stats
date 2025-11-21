@@ -29,4 +29,4 @@ jobs:
         TAPIT_API_KEY: ${{ secrets.TAPIT_API_KEY }}
         PROJECT_ID: ${{ secrets.PROJECT_ID }}
         DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-      run: python tapit_discord_bot.py
+      run: python test_projects.py
