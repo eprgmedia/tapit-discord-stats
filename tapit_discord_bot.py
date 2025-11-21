@@ -43,24 +43,34 @@ def get_project_links():
         return None
 
 def get_link_stats(link_id):
-    """Récupère les statistiques d'un lien spécifique"""
+    """Récupère les statistiques d'un lien spécifique sur les 30 derniers jours"""
+    
+    from datetime import datetime, timedelta
+    
+    # Calculer les dates (30 derniers jours)
+    end_date = datetime.utcnow()
+    start_date = end_date - timedelta(days=30)
     
     url = f"https://api.taap.it/v1/stats/links/{link_id}"
     headers = {
         "Authorization": f"Bearer {TAPIT_API_KEY}"
     }
     
+    params = {
+        "start_date": start_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "end_date": end_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "max_days": 30
+    }
+    
     try:
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, params=params)
         response.raise_for_status()
         data = response.json()
         
-        # La réponse est une liste, on prend le premier élément
+        # La réponse est une liste, on somme tous les total_clicks
         if isinstance(data, list) and len(data) > 0:
-            stats = data[0]
-            # Essayer 'total_clicks' en premier, sinon 'clicks'
-            clicks = stats.get('total_clicks', stats.get('clicks', 0))
-            return clicks
+            total_clicks = sum(stat.get('total_clicks', 0) for stat in data)
+            return total_clicks
         return 0
     
     except requests.exceptions.RequestException as e:
