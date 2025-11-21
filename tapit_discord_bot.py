@@ -95,14 +95,15 @@ def main():
     print(f"✅ {len(links)} liens trouvés")
     
     # Récupération des stats de chaque lien
-links_stats = {}
-for link in links:
-    link_name = link.get('name', 'Sans nom')
-    print(f"🔍 Lien: {link_name}")
-    print(f"   Champs disponibles: {link.keys()}")
-    print(f"   Contenu: {link}")
-    clicks = link.get('clicks', 0)  # Récupère directement les clics du lien
-    links_stats[link_name] = clicks
+    links_stats = {}
+    if links:  # Vérifier que links existe et n'est pas None
+        for link in links:
+            link_name = link.get('name', 'Sans nom')
+            print(f"🔍 Lien: {link_name}")
+            print(f"   Champs disponibles: {list(link.keys())}")
+            clicks = link.get('clicks', link.get('click_count', 0))
+            print(f"   Clics trouvés: {clicks}")
+            links_stats[link_name] = clicks
     
     # Envoi sur Discord
     send_to_discord(links_stats)
