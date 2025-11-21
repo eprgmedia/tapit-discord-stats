@@ -10,7 +10,8 @@ DISCORD_WEBHOOK_URL = os.environ.get('DISCORD_WEBHOOK_URL')
 def get_project_links():
     """Récupère tous les liens du projet spécifique"""
     
-    url = "https://api.taap.it/v1/links"
+    # On récupère les liens directement depuis le projet
+    url = f"https://api.taap.it/v1/projects/{PROJECT_ID}/links"
     headers = {
         "Authorization": f"Bearer {TAPIT_API_KEY}",
         "Content-Type": "application/json"
@@ -21,34 +22,19 @@ def get_project_links():
         response.raise_for_status()
         data = response.json()
         
-        # Debug : afficher la structure de la réponse
         print(f"📦 Structure de la réponse API: {type(data)}")
-        print(f"📦 Contenu: {data}")
         
         # Gérer différents formats de réponse
         if isinstance(data, dict):
-            # Si c'est un dictionnaire, chercher la clé 'data' ou 'links'
             all_links = data.get('items', data.get('data', data.get('links', [])))
         elif isinstance(data, list):
-            # Si c'est déjà une liste
             all_links = data
         else:
             print(f"❌ Format de réponse inattendu: {type(data)}")
             return None
         
-        # Debug : afficher tous les project_id
-        print(f"🔍 Nombre total de liens: {len(all_links)}")
-        print(f"🔑 PROJECT_ID recherché: '{PROJECT_ID}' (longueur: {len(PROJECT_ID)})")
-        
-        for i, link in enumerate(all_links[:5]):
-            link_project_id = link.get('project_id')
-            print(f"  Lien {i+1}: {link.get('name', 'Sans nom')}")
-            print(f"    project_id: '{link_project_id}' (longueur: {len(link_project_id) if link_project_id else 0})")
-            print(f"    Égal? {link_project_id == PROJECT_ID}")
-        
-        # Filtrer uniquement les liens du projet EMPIRE - Affiliation
-        project_links = [link for link in all_links if link.get('project_id') == PROJECT_ID]
-        print(f"🎯 Liens trouvés pour project {PROJECT_ID}: {len(project_links)}")
+        print(f"✅ {len(all_links)} liens trouvés dans le projet")
+        return all_links
     
     except requests.exceptions.RequestException as e:
         print(f"❌ Erreur lors de la récupération des liens: {e}")
