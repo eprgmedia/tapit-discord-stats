@@ -1,6 +1,6 @@
 import requests
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # Récupération des variables d'environnement
 TAPIT_API_KEY = os.environ.get('TAPIT_API_KEY')
@@ -43,53 +43,25 @@ def get_project_links():
         return None
 
 def get_link_stats(link_id):
-    """Récupère les statistiques d'un lien - SANS paramètres de date pour avoir les stats totales"""
+    """Récupère le résumé des statistiques d'un lien"""
     
-    url = f"https://api.taap.it/v1/stats/links/{link_id}"
+    # ENDPOINT CORRECT : /summary !
+    url = f"https://api.taap.it/v1/stats/links/{link_id}/summary"
     headers = {
         "Authorization": f"Bearer {TAPIT_API_KEY}"
     }
     
     try:
-        # Premier essai : SANS paramètres (pour avoir toutes les stats)
         response = requests.get(url, headers=headers)
         response.raise_for_status()
         data = response.json()
         
-        print(f"  📊 Réponse API: {data}")
-        
-        # La réponse est une liste d'objets stats
-        if isinstance(data, list) and len(data) > 0:
-            # Additionner tous les total_clicks de tous les objets
-            total_clicks = sum(item.get('total_clicks', 0) for item in data)
-            return total_clicks
-        
-        # Si la liste est vide, essayer avec une période (30 derniers jours)
-        print(f"  ⚠️ Liste vide, essai avec période de 30 jours...")
-        
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=30)
-        
-        params = {
-            "start_date": start_date.strftime("%Y-%m-%dT00:00:00Z"),
-            "end_date": end_date.strftime("%Y-%m-%dT23:59:59Z"),
-            "max_days": 30
-        }
-        
-        response = requests.get(url, headers=headers, params=params)
-        response.raise_for_status()
-        data = response.json()
-        
-        print(f"  📊 Réponse API (avec dates): {data}")
-        
-        if isinstance(data, list) and len(data) > 0:
-            total_clicks = sum(item.get('total_clicks', 0) for item in data)
-            return total_clicks
-        
-        return 0
+        # La réponse contient directement total_clicks
+        total_clicks = data.get('total_clicks', 0)
+        return total_clicks
     
     except requests.exceptions.RequestException as e:
-        print(f"  ❌ Erreur stats: {e}")
+        print(f"  ❌ Erreur stats pour {link_id}: {e}")
         return 0
 
 def send_to_discord(links_stats):
@@ -150,7 +122,7 @@ def main():
             link_id = link.get('id')
             
             if link_id:
-                print(f"🔍 Stats pour: {link_name} (ID: {link_id})")
+                print(f"📊 Stats pour: {link_name}")
                 clicks = get_link_stats(link_id)
                 print(f"   ✅ {clicks} clics")
                 links_stats[link_name] = clicks
