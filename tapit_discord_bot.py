@@ -42,40 +42,6 @@ def get_project_links():
         print(f"❌ Erreur lors de la récupération des liens: {e}")
         return None
 
-def get_link_stats(link_id):
-    """Récupère les statistiques d'un lien spécifique sur les 30 derniers jours"""
-    
-    from datetime import datetime, timedelta
-    
-    # Calculer les dates (30 derniers jours)
-    end_date = datetime.utcnow()
-    start_date = end_date - timedelta(days=30)
-    
-    url = f"https://api.taap.it/v1/stats/links/{link_id}"
-    headers = {
-        "Authorization": f"Bearer {TAPIT_API_KEY}"
-    }
-    
-    params = {
-        "start_date": start_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "end_date": end_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "max_days": 30
-    }
-    
-    try:
-        response = requests.get(url, headers=headers, params=params)
-        response.raise_for_status()
-        data = response.json()
-        
-        # La réponse est une liste, on somme tous les total_clicks
-        if isinstance(data, list) and len(data) > 0:
-            total_clicks = sum(stat.get('total_clicks', 0) for stat in data)
-            return total_clicks
-        return 0
-    
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Erreur stats pour {link_id}: {e}")
-        return 0
 
 def send_to_discord(links_stats):
     """Envoie les statistiques sur Discord via webhook"""
@@ -130,12 +96,9 @@ def main():
     # Récupération des stats de chaque lien
     links_stats = {}
     for link in links:
-        link_id = link.get('id')
         link_name = link.get('name', 'Sans nom')  # Récupère le nom que tu as défini
-        
-        print(f"📊 Stats pour: {link_name}...")
-        clicks = get_link_stats(link_id)
-        links_stats[link_name] = clicks
+clicks = link.get('clicks', 0)  # Récupère directement les clics du lien
+links_stats[link_name] = clicks
     
     # Envoi sur Discord
     send_to_discord(links_stats)
