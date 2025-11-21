@@ -1,6 +1,6 @@
 import requests
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # Récupération des variables d'environnement
 TAPIT_API_KEY = os.environ.get('TAPIT_API_KEY')
@@ -41,42 +41,6 @@ def get_project_links():
     except requests.exceptions.RequestException as e:
         print(f"❌ Erreur lors de la récupération des liens: {e}")
         return None
-
-def get_link_stats(link_id):
-    """Récupère les statistiques d'un lien avec les paramètres de date obligatoires"""
-    
-    # Calcul des dates (30 derniers jours)
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=30)
-    
-    # Format ISO 8601
-    start_date_str = start_date.strftime("%Y-%m-%dT00:00:00Z")
-    end_date_str = end_date.strftime("%Y-%m-%dT23:59:59Z")
-    
-    url = f"https://api.taap.it/v1/stats/links/{link_id}"
-    params = {
-        "start_date": start_date_str,
-        "end_date": end_date_str,
-        "max_days": 30
-    }
-    headers = {
-        "Authorization": f"Bearer {TAPIT_API_KEY}"
-    }
-    
-    try:
-        response = requests.get(url, headers=headers, params=params)
-        response.raise_for_status()
-        data = response.json()
-        
-        # La réponse est une liste, on additionne tous les total_clicks
-        if isinstance(data, list) and len(data) > 0:
-            total_clicks = sum(item.get('total_clicks', 0) for item in data)
-            return total_clicks
-        return 0
-    
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Erreur stats pour {link_id}: {e}")
-        return 0
 
 def send_to_discord(links_stats):
     """Envoie les statistiques sur Discord via webhook"""
@@ -128,20 +92,27 @@ def main():
     
     print(f"✅ {len(links)} liens trouvés")
     
-    # Récupération des stats de chaque lien
+    # DEBUG: Afficher les champs disponibles du premier lien
+    if links and len(links) > 0:
+        print(f"🔍 Champs disponibles dans un lien: {list(links[0].keys())}")
+    
+    # Récupération des stats directement depuis les objets link
     links_stats = {}
     if links:
         for link in links:
             link_name = link.get('name', 'Sans nom')
-            link_id = link.get('id')
             
-            if link_id:
-                print(f"🔍 Récupération des stats pour: {link_name}")
-                clicks = get_link_stats(link_id)
-                print(f"   ✅ {clicks} clics trouvés")
-                links_stats[link_name] = clicks
-            else:
-                print(f"⚠️ Pas d'ID pour le lien: {link_name}")
+            # Essayer différents noms de champs possibles pour les clics
+            clicks = (
+                link.get('clicks') or 
+                link.get('click_count') or 
+                link.get('total_clicks') or 
+                link.get('clics') or
+                0
+            )
+            
+            print(f"📊 {link_name}: {clicks} clics")
+            links_stats[link_name] = clicks
     
     # Envoi sur Discord
     send_to_discord(links_stats)
