@@ -19,7 +19,22 @@ def get_project_links():
     try:
         response = requests.get(url, headers=headers)
         response.raise_for_status()
-        all_links = response.json()
+        data = response.json()
+        
+        # Debug : afficher la structure de la réponse
+        print(f"📦 Structure de la réponse API: {type(data)}")
+        print(f"📦 Contenu: {data}")
+        
+        # Gérer différents formats de réponse
+        if isinstance(data, dict):
+            # Si c'est un dictionnaire, chercher la clé 'data' ou 'links'
+            all_links = data.get('data', data.get('links', []))
+        elif isinstance(data, list):
+            # Si c'est déjà une liste
+            all_links = data
+        else:
+            print(f"❌ Format de réponse inattendu: {type(data)}")
+            return None
         
         # Filtrer uniquement les liens du projet EMPIRE - Affiliation
         project_links = [link for link in all_links if link.get('project_id') == PROJECT_ID]
