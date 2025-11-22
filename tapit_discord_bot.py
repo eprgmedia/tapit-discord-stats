@@ -94,38 +94,56 @@ def main():
     empire_links = [link for link in links if 'EMPIRE' in link.get('name', '')]
     print(f"✅ {len(empire_links)} liens EMPIRE trouvés")
     
-    # NOUVELLE APPROCHE : Tester plusieurs endpoints stats
+    # SOLUTION FINALE : Utiliser l'endpoint correct selon la doc officielle
     links_stats = []
-    for i, link in enumerate(empire_links):
+    for link in empire_links:
         link_id = link['id']
         link_name = link['name']
         
-        # Test 1 : Essayer l'endpoint stats sans /summary
-        print(f"📊 Test pour {link_name}...")
-        
-        # Dates : 30 derniers jours
+        # Dates : 30 derniers jours (format ISO 8601 avec timezone)
         end_date = datetime.now()
         start_date = end_date - timedelta(days=30)
-        start_date_str = start_date.strftime("%Y-%m-%d")
-        end_date_str = end_date.strftime("%Y-%m-%d")
+        
+        # FORMAT EXACT selon la doc : ISO 8601 avec timezone
+        start_date_str = start_date.strftime("%Y-%m-%dT%H:%M:%SZ")
+        end_date_str = end_date.strftime("%Y-%m-%dT%H:%M:%SZ")
+        
+        # ENDPOINT CORRECT : /v1/stats/links/{link_id} (sans /summary)
+        url = f"https://api.taap.it/v1/stats/links/{link_id}"
+        
+        # Paramètres EXACTS selon la doc
+        params = {
+            "start_date": start_date_str,
+            "end_date": end_date_str,
+            "max_days": 30
+        }
         
         headers = {"Authorization": f"Bearer {TAPIT_API_KEY}"}
         
-        # ESSAI 1 : /v1/links/{id}/stats (sans summary)
-        url1 = f"https://api.taap.it/v1/links/{link_id}/stats"
-        params = {"start_date": start_date_str, "end_date": end_date_str}
-        
         try:
-            response = requests.get(url1, headers=headers, params=params)
+            print(f"📊 Récupération stats pour {link_name}...")
+            response = requests.get(url, headers=headers, params=params)
+            
             if response.status_code == 200:
                 data = response.json()
-                clicks = data.get('clicks', data.get('total_clicks', 0))
-                print(f"✅ ENDPOINT 1 FONCTIONNE ! {link_name}: {clicks} clics")
+                
+                # La réponse est un ARRAY de stats par jour
+                # On doit sommer tous les total_clicks
+                total_clicks = 0
+                if isinstance(data, list) and len(data) > 0:
+                    for day_stat in data:
+                        total_clicks += day_stat.get('total_clicks', 0)
+                    print(f"✅ {link_name}: {total_clicks} clics")
+                else:
+                    print(f"⚠️ {link_name}: Pas de données (array vide)")
+                
+                clicks = total_clicks
             else:
-                print(f"⚠️ Endpoint 1: Status {response.status_code}")
+                print(f"⚠️ {link_name}: Status {response.status_code}")
                 clicks = 0
+        
         except Exception as e:
-            print(f"❌ Endpoint 1 erreur: {e}")
+            print(f"❌ Erreur pour {link_name}: {e}")
             clicks = 0
         
         links_stats.append({
