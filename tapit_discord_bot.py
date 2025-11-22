@@ -30,27 +30,51 @@ def get_project_links():
 def get_link_stats(link_id, link_name):
     """Récupère les stats d'un lien spécifique"""
     
-    # Dates : du début (création des liens) à aujourd'hui
-    start_date = "2025-11-19"  # Date de création des premiers liens
+    # Dates : du début à aujourd'hui
+    start_date = "2024-01-01"  # Date large pour être sûr
     end_date = datetime.now().strftime("%Y-%m-%d")
     
-    url = f"https://api.taap.it/v1/stats/links/{link_id}/summary"
+    # ESSAI 1 : Endpoint sans /summary
+    url = f"https://api.taap.it/v1/stats/links/{link_id}"
     params = {
         "start_date": start_date,
-        "end_date": end_date
+        "end_date": end_date,
+        "max_days": 30
     }
     headers = {
         "Authorization": f"Bearer {TAPIT_API_KEY}"
     }
     
     try:
+        print(f"🔄 Tentative pour {link_name}...")
         response = requests.get(url, headers=headers, params=params)
-        response.raise_for_status()
-        data = response.json()
         
-        total_clicks = data.get('total_clicks', 0)
-        print(f"✅ {link_name}: {total_clicks} clics")
-        return total_clicks
+        if response.status_code == 200:
+            data = response.json()
+            
+            # L'endpoint retourne un array de stats quotidiennes
+            # On doit sommer tous les total_clicks
+            total_clicks = 0
+            if isinstance(data, list):
+                for day_stat in data:
+                    total_clicks += day_stat.get('total_clicks', 0)
+            else:
+                total_clicks = data.get('total_clicks', 0)
+            
+            print(f"✅ {link_name}: {total_clicks} clics")
+            return total_clicks
+        
+        elif response.status_code == 403:
+            print(f"⚠️ {link_name}: 403 Forbidden - Accès refusé")
+            return 0
+            
+        elif response.status_code == 404:
+            print(f"⚠️ {link_name}: 404 - Pas de stats disponibles")
+            return 0
+            
+        else:
+            print(f"⚠️ {link_name}: Status {response.status_code}")
+            return 0
     
     except requests.exceptions.RequestException as e:
         print(f"❌ Erreur stats pour {link_name}: {e}")
