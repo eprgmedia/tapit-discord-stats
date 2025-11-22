@@ -96,17 +96,17 @@ def main():
     
     # SOLUTION FINALE : Utiliser l'endpoint correct selon la doc officielle
     links_stats = []
-    for link in empire_links:
+    for i, link in enumerate(empire_links):
         link_id = link['id']
         link_name = link['name']
         
-        # Dates : 30 derniers jours (format ISO 8601 avec timezone)
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=30)
+        # Dates : 30 derniers jours COMPLETS (excluant aujourd'hui)
+        end_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=1)  # Hier à minuit
+        start_date = end_date - timedelta(days=29)  # 30 jours avant hier
         
         # FORMAT EXACT selon la doc : ISO 8601 avec timezone
-        start_date_str = start_date.strftime("%Y-%m-%dT%H:%M:%SZ")
-        end_date_str = end_date.strftime("%Y-%m-%dT%H:%M:%SZ")
+        start_date_str = start_date.strftime("%Y-%m-%dT00:00:00Z")
+        end_date_str = end_date.strftime("%Y-%m-%dT23:59:59Z")
         
         # ENDPOINT CORRECT : /v1/stats/links/{link_id} (sans /summary)
         url = f"https://api.taap.it/v1/stats/links/{link_id}"
@@ -122,10 +122,20 @@ def main():
         
         try:
             print(f"📊 Récupération stats pour {link_name}...")
+            
+            # DEBUG pour le premier lien
+            if i == 0:
+                print(f"🔍 DEBUG URL: {url}")
+                print(f"🔍 DEBUG Params: {params}")
+            
             response = requests.get(url, headers=headers, params=params)
             
             if response.status_code == 200:
                 data = response.json()
+                
+                # DEBUG pour le premier lien
+                if i == 0:
+                    print(f"🔍 DEBUG Réponse complète: {data}")
                 
                 # La réponse est un ARRAY de stats par jour
                 # On doit sommer tous les total_clicks
@@ -140,6 +150,8 @@ def main():
                 clicks = total_clicks
             else:
                 print(f"⚠️ {link_name}: Status {response.status_code}")
+                if i == 0:
+                    print(f"🔍 DEBUG Erreur: {response.text}")
                 clicks = 0
         
         except Exception as e:
