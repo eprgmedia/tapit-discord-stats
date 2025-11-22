@@ -41,6 +41,11 @@ def get_project_links():
         project_links = [link for link in all_links if link.get('name', '').startswith('EMPIRE')]
         
         print(f"✅ {len(project_links)} liens trouvés commençant par 'EMPIRE'")
+        
+        # 🔍 DEBUG : Afficher le contenu du premier lien pour voir les champs disponibles
+        if project_links:
+            print(f"🔍 EXEMPLE DE LIEN COMPLET: {project_links[0]}")
+        
         return project_links
     
     except requests.exceptions.RequestException as e:
