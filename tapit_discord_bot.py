@@ -97,8 +97,15 @@ def main():
     # CORRECTION FINALE : Utiliser directement le champ 'clicks' de chaque lien
     # Pas besoin d'appeler l'API stats !
     links_stats = []
-    for link in empire_links:
+    for i, link in enumerate(empire_links):
         link_name = link['name']
+        
+        # DEBUG : Afficher TOUS les champs du premier lien pour diagnostic
+        if i == 0:
+            print(f"🔍 DIAGNOSTIC - Tous les champs disponibles dans un lien:")
+            for key, value in link.items():
+                print(f"   - {key}: {value}")
+        
         clicks = link.get('clicks', 0)  # Le champ clicks est DÉJÀ dans la réponse !
         
         print(f"✅ {link_name}: {clicks} clics")
