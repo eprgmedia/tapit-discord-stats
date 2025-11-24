@@ -47,6 +47,63 @@ def get_project_links():
         print(f"❌ Erreur lors de la récupération des liens: {e}")
         return None
 
+def get_link_stats(link_id, link_name):
+    """Récupère les stats d'un lien via l'API Taap.it"""
+    
+    # Dates : 30 derniers jours
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=30)
+    
+    # Format ISO 8601 avec timezone
+    start_date_str = start_date.strftime("%Y-%m-%dT00:00:00Z")
+    end_date_str = end_date.strftime("%Y-%m-%dT23:59:59Z")
+    
+    # ENDPOINT : /v1/stats/links/{link_id}/summary (selon le support)
+    url = f"https://api.taap.it/v1/stats/links/{link_id}/summary"
+    
+    params = {
+        "start_date": start_date_str,
+        "end_date": end_date_str,
+        "max_days": 30
+    }
+    
+    headers = {
+        "Authorization": f"Bearer {TAPIT_API_KEY}"
+    }
+    
+    try:
+        print(f"📊 Récupération stats pour {link_name}...")
+        response = requests.get(url, headers=headers, params=params)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # La réponse peut être soit un objet, soit un array
+            total_clicks = 0
+            
+            if isinstance(data, dict):
+                # Si c'est un objet avec total_clicks directement
+                total_clicks = data.get('total_clicks', 0)
+            elif isinstance(data, list):
+                # Si c'est un array de stats quotidiennes, on somme
+                for day_stat in data:
+                    total_clicks += day_stat.get('total_clicks', 0)
+            
+            print(f"✅ {link_name}: {total_clicks} clics")
+            return total_clicks
+        
+        elif response.status_code == 404:
+            print(f"⚠️ {link_name}: 404 - Endpoint non disponible (problème migration)")
+            return 0
+        
+        else:
+            print(f"⚠️ {link_name}: Status {response.status_code}")
+            return 0
+    
+    except Exception as e:
+        print(f"❌ Erreur pour {link_name}: {e}")
+        return 0
+
 def send_to_discord(links_stats):
     """Envoie les statistiques sur Discord via webhook"""
     
@@ -68,7 +125,7 @@ def send_to_discord(links_stats):
     
     payload = {
         "content": message,
-        "username": "Tap.it Stats Bot"
+        "username": "Taap.it Stats Bot"
     }
     
     try:
@@ -80,7 +137,7 @@ def send_to_discord(links_stats):
         print(f"❌ Erreur Discord: {e}")
 
 def main():
-    print("🚀 Démarrage du bot Tap.it Stats...")
+    print("🚀 Démarrage du bot Taap.it Stats...")
     
     # Récupération des liens
     print(f"📋 Récupération des liens du projet {PROJECT_ID}...")
@@ -94,70 +151,13 @@ def main():
     empire_links = [link for link in links if 'EMPIRE' in link.get('name', '')]
     print(f"✅ {len(empire_links)} liens EMPIRE trouvés")
     
-    # SOLUTION FINALE : Utiliser l'endpoint correct selon la doc officielle
+    # Récupération des stats pour chaque lien
     links_stats = []
-    for i, link in enumerate(empire_links):
+    for link in empire_links:
         link_id = link['id']
         link_name = link['name']
         
-        # Dates : 30 derniers jours COMPLETS (excluant aujourd'hui)
-        end_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=1)  # Hier à minuit
-        start_date = end_date - timedelta(days=29)  # 30 jours avant hier
-        
-        # FORMAT EXACT selon la doc : ISO 8601 avec timezone
-        start_date_str = start_date.strftime("%Y-%m-%dT00:00:00Z")
-        end_date_str = end_date.strftime("%Y-%m-%dT23:59:59Z")
-        
-        # ENDPOINT CORRECT : /v1/stats/links/{link_id} (sans /summary)
-        url = f"https://api.taap.it/v1/stats/links/{link_id}"
-        
-        # Paramètres EXACTS selon la doc
-        params = {
-            "start_date": start_date_str,
-            "end_date": end_date_str,
-            "max_days": 30
-        }
-        
-        headers = {"Authorization": f"Bearer {TAPIT_API_KEY}"}
-        
-        try:
-            print(f"📊 Récupération stats pour {link_name}...")
-            
-            # DEBUG pour le premier lien
-            if i == 0:
-                print(f"🔍 DEBUG URL: {url}")
-                print(f"🔍 DEBUG Params: {params}")
-            
-            response = requests.get(url, headers=headers, params=params)
-            
-            if response.status_code == 200:
-                data = response.json()
-                
-                # DEBUG pour le premier lien
-                if i == 0:
-                    print(f"🔍 DEBUG Réponse complète: {data}")
-                
-                # La réponse est un ARRAY de stats par jour
-                # On doit sommer tous les total_clicks
-                total_clicks = 0
-                if isinstance(data, list) and len(data) > 0:
-                    for day_stat in data:
-                        total_clicks += day_stat.get('total_clicks', 0)
-                    print(f"✅ {link_name}: {total_clicks} clics")
-                else:
-                    print(f"⚠️ {link_name}: Pas de données (array vide)")
-                
-                clicks = total_clicks
-            else:
-                print(f"⚠️ {link_name}: Status {response.status_code}")
-                if i == 0:
-                    print(f"🔍 DEBUG Erreur: {response.text}")
-                clicks = 0
-        
-        except Exception as e:
-            print(f"❌ Erreur pour {link_name}: {e}")
-            clicks = 0
-        
+        clicks = get_link_stats(link_id, link_name)
         links_stats.append({
             'name': link_name,
             'clicks': clicks
