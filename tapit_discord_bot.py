@@ -41,6 +41,11 @@ def get_project_links():
         project_links = [link for link in all_links if link.get('name', '').startswith('EMPIRE')]
         
         print(f"✅ {len(project_links)} liens trouvés commençant par 'EMPIRE'")
+        
+        # DEBUG : Afficher les IDs des 3 premiers liens
+        for i, link in enumerate(project_links[:3]):
+            print(f"🔍 DEBUG Lien {i+1}: ID={link.get('id')}, Name={link.get('name')}")
+        
         return project_links
     
     except requests.exceptions.RequestException as e:
@@ -58,9 +63,8 @@ def get_link_stats(link_id, link_name):
     start_date_str = start_date.strftime("%Y-%m-%dT00:00:00Z")
     end_date_str = end_date.strftime("%Y-%m-%dT23:59:59Z")
     
-    # CHANGEMENT : Utiliser l'endpoint SANS /summary
-    # Celui-ci retournait 200 avant (mais array vide à cause du bug)
-    url = f"https://api.taap.it/v1/stats/links/{link_id}"
+    # Utiliser l'endpoint /summary comme recommandé par le support
+    url = f"https://api.taap.it/v1/stats/links/{link_id}/summary"
     
     params = {
         "start_date": start_date_str,
@@ -74,35 +78,29 @@ def get_link_stats(link_id, link_name):
     
     try:
         print(f"📊 Récupération stats pour {link_name}...")
+        print(f"   🔗 URL: {url}")
+        
         response = requests.get(url, headers=headers, params=params)
+        
+        print(f"   📡 Status: {response.status_code}")
         
         if response.status_code == 200:
             data = response.json()
+            print(f"   📄 Réponse: {data}")
             
-            # DEBUG : Afficher la réponse pour le premier lien
-            if link_name == empire_links[0]['name']:
-                print(f"🔍 DEBUG Réponse pour {link_name}: {data}")
-            
-            # La réponse peut être soit un objet, soit un array
-            total_clicks = 0
-            
-            if isinstance(data, dict):
-                # Si c'est un objet avec total_clicks directement
-                total_clicks = data.get('total_clicks', 0)
-            elif isinstance(data, list):
-                # Si c'est un array de stats quotidiennes, on somme
-                for day_stat in data:
-                    total_clicks += day_stat.get('total_clicks', 0)
+            # Selon la doc, /summary retourne les top stats
+            total_clicks = data.get('total_clicks', 0)
             
             print(f"✅ {link_name}: {total_clicks} clics")
             return total_clicks
         
         elif response.status_code == 404:
-            print(f"⚠️ {link_name}: 404 - Endpoint non disponible")
+            print(f"⚠️ {link_name}: 404 - Lien introuvable ou pas de stats")
             return 0
         
         else:
             print(f"⚠️ {link_name}: Status {response.status_code}")
+            print(f"   Réponse: {response.text}")
             return 0
     
     except Exception as e:
@@ -153,7 +151,6 @@ def main():
         return
     
     # Filtrer les liens EMPIRE
-    global empire_links  # Pour le debug dans get_link_stats
     empire_links = [link for link in links if 'EMPIRE' in link.get('name', '')]
     print(f"✅ {len(empire_links)} liens EMPIRE trouvés")
     
