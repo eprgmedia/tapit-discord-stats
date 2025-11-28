@@ -58,8 +58,9 @@ def get_link_stats(link_id, link_name):
     start_date_str = start_date.strftime("%Y-%m-%dT00:00:00Z")
     end_date_str = end_date.strftime("%Y-%m-%dT23:59:59Z")
     
-    # ENDPOINT : /v1/stats/links/{link_id}/summary (selon le support)
-    url = f"https://api.taap.it/v1/stats/links/{link_id}/summary"
+    # CHANGEMENT : Utiliser l'endpoint SANS /summary
+    # Celui-ci retournait 200 avant (mais array vide à cause du bug)
+    url = f"https://api.taap.it/v1/stats/links/{link_id}"
     
     params = {
         "start_date": start_date_str,
@@ -78,6 +79,10 @@ def get_link_stats(link_id, link_name):
         if response.status_code == 200:
             data = response.json()
             
+            # DEBUG : Afficher la réponse pour le premier lien
+            if link_name == empire_links[0]['name']:
+                print(f"🔍 DEBUG Réponse pour {link_name}: {data}")
+            
             # La réponse peut être soit un objet, soit un array
             total_clicks = 0
             
@@ -93,7 +98,7 @@ def get_link_stats(link_id, link_name):
             return total_clicks
         
         elif response.status_code == 404:
-            print(f"⚠️ {link_name}: 404 - Endpoint non disponible (problème migration)")
+            print(f"⚠️ {link_name}: 404 - Endpoint non disponible")
             return 0
         
         else:
@@ -148,6 +153,7 @@ def main():
         return
     
     # Filtrer les liens EMPIRE
+    global empire_links  # Pour le debug dans get_link_stats
     empire_links = [link for link in links if 'EMPIRE' in link.get('name', '')]
     print(f"✅ {len(empire_links)} liens EMPIRE trouvés")
     
